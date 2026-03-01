@@ -43,19 +43,20 @@ SELECT
     p.Address AS 服务器地址,
     p.Port AS 端口,
     COUNT(h.id) AS 测试次数,
+    MAX(h.datetime) AS 最近测试时间,
+    ROUND(SUM(CASE WHEN h.Delay > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(h.id), 2) AS 连接成功率,
     AVG(h.Delay) AS 平均延迟,
     MIN(h.Delay) AS 最低延迟,
     MAX(h.Delay) AS 最高延迟,
     ROUND(AVG(h.Speed), 2) AS 平均速度,
     MAX(h.Speed) AS 最高速度,
-    ROUND((MAX(h.Delay) - MIN(h.Delay)) * 1.0 / NULLIF(AVG(h.Delay), 0), 2) AS 延迟波动率,
-    MAX(h.datetime) AS 最近测试时间,
-    ROUND(SUM(CASE WHEN h.Delay > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(h.id), 2) AS 连接成功率
+    ROUND((MAX(h.Delay) - MIN(h.Delay)) * 1.0 / NULLIF(AVG(h.Delay), 0), 2) AS 延迟波动率
 FROM ProfileItem p
 INNER JOIN ProfileExItemHistory h ON p.IndexId = h.IndexId
 WHERE h.Delay IS NOT NULL
 GROUP BY p.IndexId, p.Remarks, p.ConfigType, p.Address, p.Port
-ORDER BY 连接成功率 DESC, 测试次数 DESC, 平均延迟 ASC, 延迟波动率 ASC;
+ORDER BY 连接成功率 DESC, 测试次数 DESC, 平均延迟 ASC, 延迟波动率 ASC
+LIMIT 100;
 
 -- =====================================================
 -- 查询2: 获取延迟最低的节点（即时性能 - 无时间限制）
