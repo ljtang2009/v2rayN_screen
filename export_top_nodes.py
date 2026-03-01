@@ -892,8 +892,9 @@ def extract_query1(sql_content: str) -> Optional[str]:
             sql_lines = [line for line in lines if not line.strip().startswith('--')]
             sql = '\n'.join(sql_lines).strip()
             
-            if sql.endswith(';'):
-                sql = sql[:-1]
+            sql = re.sub(r'\s*LIMIT\s+\d+\s*;?\s*$', '', sql, flags=re.IGNORECASE)
+            
+            sql = sql.rstrip(';').strip()
             
             sql += f" LIMIT {MAX_NODES};"
             
