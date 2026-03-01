@@ -158,6 +158,29 @@ def url_decode(data: str) -> str:
     return urllib.parse.unquote(data)
 
 
+def remove_indexid_suffix(remarks: str) -> str:
+    """
+    移除 Remarks 字段中的 IndexId 后缀
+    
+    说明：
+        根据项目文档，节点 Remarks 字段可能包含 "_{IndexId}" 格式的后缀。
+        当节点导出后重新导入时，IndexId 会被重新生成，保留旧后缀会导致
+        数据关联错误。此函数用于在导出时移除该后缀。
+    
+    参数：
+        remarks: 原始 Remarks 字符串
+    
+    返回：
+        移除 IndexId 后缀后的 Remarks 字符串
+    """
+    if not remarks:
+        return ""
+    
+    pattern = r'_\d+$'
+    
+    return re.sub(pattern, '', remarks).strip()
+
+
 def get_ipv6_address(address: str) -> str:
     """
     处理 IPv6 地址格式
@@ -268,7 +291,7 @@ def generate_vmess_uri(node: Dict[str, Any]) -> Optional[str]:
         
         vmess_data = {
             "v": 2,
-            "ps": node.get('Remarks', '').strip() if node.get('Remarks') else "",
+            "ps": remove_indexid_suffix(node.get('Remarks', '')) if node.get('Remarks') else "",
             "add": node.get('Address', ''),
             "port": node.get('Port', 443),
             "id": password,
@@ -397,7 +420,7 @@ def generate_vless_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         uri = f"vless://{password}@{address}:{port}"
         if query_string:
@@ -498,7 +521,7 @@ def generate_trojan_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         uri = f"trojan://{password}@{address}:{port}"
         if query_string:
@@ -548,7 +571,7 @@ def generate_shadowsocks_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         return f"ss://{user_info}@{address}:{port}{remark}"
         
@@ -586,7 +609,7 @@ def generate_socks_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         if user_info:
             return f"socks://{user_info}@{address}:{port}{remark}"
@@ -650,7 +673,7 @@ def generate_hysteria2_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         uri = f"hysteria2://{password}@{address}:{port}"
         if query_string:
@@ -709,7 +732,7 @@ def generate_tuic_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         user_info = f"{username}:{password}" if username else password
         
@@ -773,7 +796,7 @@ def generate_wireguard_uri(node: Dict[str, Any]) -> Optional[str]:
         
         remark = ""
         if node.get('Remarks'):
-            remark = "#" + url_encode(node['Remarks'])
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
         uri = f"wireguard://{password}@{address}:{port}"
         if query_string:
