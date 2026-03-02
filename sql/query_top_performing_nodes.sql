@@ -13,14 +13,14 @@
 -- =====================================================
 
 -- =====================================================
--- 查询1: 获取表现最优秀的节点（综合评分 - 无时间限制）
+-- 查询1: 获取表现最优秀的节点（综合评分 - 时间加权）
 -- =====================================================
--- 说明：基于连接成功率、平均延迟、测试次数和稳定性综合评估节点性能
+-- 说明：基于时间加权的连接成功率、平均延迟、测试次数和稳定性综合评估节点性能
 -- 修改内容：
---   - 移除时间范围限制（查询全部历史数据）
+--   - 实现时间加权计算，最近数据权重更高
 --   - 取消测试次数限制
---   - 新增"连接成功率"列（保留两位小数）
---   - 调整排序逻辑：连接成功率 DESC, 测试次数 DESC, 平均延迟 ASC, 延迟波动率 ASC
+--   - 新增"加权连接成功率"和"加权平均延迟"列
+--   - 调整排序逻辑：加权连接成功率 DESC, 最近测试时间 DESC, 测试次数 DESC, 加权平均延迟 ASC, 延迟波动率 ASC
 SELECT 
     p.IndexId,
     p.Remarks AS 节点名称,
@@ -45,7 +45,9 @@ SELECT
     COUNT(h.id) AS 测试次数,
     MAX(h.datetime) AS 最近测试时间,
     ROUND(SUM(CASE WHEN h.Delay > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(h.id), 2) AS 连接成功率,
+    ROUND(SUM(CASE WHEN h.Delay > 0 THEN (1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))) ELSE 0 END) * 100.0 / SUM(1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))), 2) AS 加权连接成功率,
     AVG(h.Delay) AS 平均延迟,
+    ROUND(SUM(h.Delay * (1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime)))) / SUM(1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))), 2) AS 加权平均延迟,
     MIN(h.Delay) AS 最低延迟,
     MAX(h.Delay) AS 最高延迟,
     ROUND(AVG(h.Speed), 2) AS 平均速度,
@@ -55,7 +57,7 @@ FROM ProfileItem p
 INNER JOIN ProfileExItemHistory h ON p.IndexId = h.IndexId
 WHERE h.Delay IS NOT NULL
 GROUP BY p.IndexId, p.Remarks, p.ConfigType, p.Address, p.Port
-ORDER BY 连接成功率 DESC, 测试次数 DESC, 平均延迟 ASC, 延迟波动率 ASC
+ORDER BY 加权连接成功率 DESC, 加权平均延迟 ASC, 测试次数 DESC, 延迟波动率 ASC
 LIMIT 100;
 
 -- =====================================================
