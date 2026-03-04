@@ -810,6 +810,163 @@ def generate_wireguard_uri(node: Dict[str, Any]) -> Optional[str]:
         return None
 
 
+def generate_anytls_uri(node: Dict[str, Any]) -> Optional[str]:
+    """
+    生成 Anytls 协议分享链接
+    
+    格式：anytls://密码@地址:端口?参数#备注
+    
+    参数：
+        node: 节点数据字典
+    
+    返回：
+        Anytls 分享链接
+    """
+    try:
+        config_type = node.get('ConfigType')
+        if config_type != 11:
+            return None
+        
+        password = url_encode(node.get('Password', ''))
+        if not password:
+            logger.warning(f"Anytls 节点 {node.get('Remarks')} 缺少密码")
+            return None
+        
+        address = get_ipv6_address(node.get('Address', ''))
+        port = node.get('Port', 443)
+        
+        params = {}
+        
+        stream_security = node.get('StreamSecurity', '')
+        if stream_security:
+            params['security'] = stream_security
+        
+        sni = node.get('Sni', '')
+        if sni:
+            params['sni'] = url_encode(sni)
+        
+        fingerprint = node.get('Fingerprint', '')
+        if fingerprint:
+            params['fp'] = url_encode(fingerprint)
+        
+        public_key = node.get('PublicKey', '')
+        if public_key:
+            params['pbk'] = url_encode(public_key)
+        
+        short_id = node.get('ShortId', '')
+        if short_id:
+            params['sid'] = url_encode(short_id)
+        
+        spider_x = node.get('SpiderX', '')
+        if spider_x:
+            params['spx'] = url_encode(spider_x)
+        
+        mldsa65_verify = node.get('Mldsa65Verify', '')
+        if mldsa65_verify:
+            params['pqv'] = url_encode(mldsa65_verify)
+        
+        ech_config_list = node.get('EchConfigList', '')
+        if ech_config_list:
+            params['ech'] = url_encode(ech_config_list)
+        
+        cert_sha = node.get('CertSha', '')
+        if cert_sha:
+            params['pcs'] = url_encode(cert_sha)
+        
+        finalmask = node.get('Finalmask', '')
+        if finalmask:
+            try:
+                finalmask_obj = json.loads(finalmask)
+                finalmask_str = json.dumps(finalmask_obj, separators=(',', ':'), ensure_ascii=False)
+                params['fm'] = url_encode(finalmask_str)
+            except (json.JSONDecodeError, TypeError):
+                params['fm'] = url_encode(finalmask)
+        
+        alpn = node.get('Alpn', '')
+        if alpn:
+            params['alpn'] = url_encode(alpn)
+        
+        allow_insecure = node.get('AllowInsecure', False)
+        if allow_insecure:
+            params['insecure'] = '1'
+            params['allowInsecure'] = '1'
+        else:
+            params['insecure'] = '0'
+            params['allowInsecure'] = '0'
+        
+        network = node.get('Network', DEFAULT_NETWORK) or DEFAULT_NETWORK
+        params['type'] = network
+        
+        if network == 'tcp':
+            header_type = node.get('HeaderType', 'none') or 'none'
+            params['headerType'] = header_type
+            request_host = node.get('RequestHost', '')
+            if request_host:
+                params['host'] = url_encode(request_host)
+        
+        elif network in ('ws', 'httpupgrade'):
+            request_host = node.get('RequestHost', '')
+            if request_host:
+                params['host'] = url_encode(request_host)
+            path = node.get('Path', '')
+            if path:
+                params['path'] = url_encode(path)
+        
+        elif network == 'grpc':
+            request_host = node.get('RequestHost', '')
+            if request_host:
+                params['authority'] = url_encode(request_host)
+            path = node.get('Path', '')
+            if path:
+                params['serviceName'] = url_encode(path)
+            header_type = node.get('HeaderType', '')
+            if header_type in ('gun', 'multi'):
+                params['mode'] = url_encode(header_type)
+        
+        elif network in ('http', 'h2'):
+            params['type'] = 'http'
+            request_host = node.get('RequestHost', '')
+            if request_host:
+                params['host'] = url_encode(request_host)
+            path = node.get('Path', '')
+            if path:
+                params['path'] = url_encode(path)
+        
+        elif network == 'kcp':
+            header_type = node.get('HeaderType', 'none') or 'none'
+            params['headerType'] = header_type
+            path = node.get('Path', '')
+            if path:
+                params['seed'] = url_encode(path)
+        
+        elif network == 'quic':
+            header_type = node.get('HeaderType', 'none') or 'none'
+            params['headerType'] = header_type
+            quic_security = node.get('RequestHost', '')
+            if quic_security:
+                params['quicSecurity'] = url_encode(quic_security)
+            path = node.get('Path', '')
+            if path:
+                params['key'] = url_encode(path)
+        
+        query_string = build_query_string(params)
+        
+        remark = ""
+        if node.get('Remarks'):
+            remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
+        
+        uri = f"anytls://{password}@{address}:{port}"
+        if query_string:
+            uri += f"?{query_string}"
+        uri += remark
+        
+        return uri
+        
+    except Exception as e:
+        logger.error(f"生成 Anytls 链接失败: {e}")
+        return None
+
+
 def generate_share_uri(node: Dict[str, Any]) -> Optional[str]:
     """
     根据节点类型生成对应的分享链接
@@ -831,6 +988,7 @@ def generate_share_uri(node: Dict[str, Any]) -> Optional[str]:
         7: generate_hysteria2_uri,
         8: generate_tuic_uri,
         9: generate_wireguard_uri,
+        11: generate_anytls_uri,
     }
     
     generator = generators.get(config_type)
