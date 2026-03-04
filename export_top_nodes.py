@@ -1139,7 +1139,7 @@ def get_full_node_data(db_path: str, index_ids: List[str]) -> Optional[List[Dict
                 Id, Password, Username, Network, HeaderType, RequestHost,
                 Path, StreamSecurity, AllowInsecure, Sni, Alpn,
                 Fingerprint, PublicKey, ShortId, SpiderX, ProtoExtra,
-                CertSha, Extra, Security
+                CertSha, Extra, Security, Mldsa65Verify, EchConfigList, Finalmask
             FROM ProfileItem 
             WHERE IndexId IN ({placeholders})
         """
