@@ -378,6 +378,39 @@ def generate_vless_uri(node: Dict[str, Any]) -> Optional[str]:
         if spider_x:
             params['spx'] = url_encode(spider_x)
         
+        mldsa65_verify = node.get('Mldsa65Verify', '')
+        if mldsa65_verify:
+            params['pqv'] = url_encode(mldsa65_verify)
+        
+        ech_config_list = node.get('EchConfigList', '')
+        if ech_config_list:
+            params['ech'] = url_encode(ech_config_list)
+        
+        cert_sha = node.get('CertSha', '')
+        if cert_sha:
+            params['pcs'] = url_encode(cert_sha)
+        
+        finalmask = node.get('Finalmask', '')
+        if finalmask:
+            try:
+                finalmask_obj = json.loads(finalmask)
+                finalmask_str = json.dumps(finalmask_obj, separators=(',', ':'), ensure_ascii=False)
+                params['fm'] = url_encode(finalmask_str)
+            except (json.JSONDecodeError, TypeError):
+                params['fm'] = url_encode(finalmask)
+        
+        alpn = node.get('Alpn', '')
+        if alpn:
+            params['alpn'] = url_encode(alpn)
+        
+        allow_insecure = node.get('AllowInsecure', False)
+        if allow_insecure:
+            params['insecure'] = '1'
+            params['allowInsecure'] = '1'
+        else:
+            params['insecure'] = '0'
+            params['allowInsecure'] = '0'
+        
         network = node.get('Network', DEFAULT_NETWORK) or DEFAULT_NETWORK
         params['type'] = network
         
@@ -539,7 +572,7 @@ def generate_shadowsocks_uri(node: Dict[str, Any]) -> Optional[str]:
     """
     生成 Shadowsocks 协议分享链接
     
-    格式：ss://Base64(方法:密码)@地址:端口#备注
+    格式：ss://Base64(方法:密码)@地址:端口?plugin=...#备注
     
     参数：
         node: 节点数据字典
@@ -569,11 +602,71 @@ def generate_shadowsocks_uri(node: Dict[str, Any]) -> Optional[str]:
         
         user_info = base64_encode(f"{method}:{password}", url_safe=True)
         
+        params = {}
+        
+        network = node.get('Network', 'tcp') or 'tcp'
+        header_type = node.get('HeaderType', '') or ''
+        request_host = node.get('RequestHost', '') or ''
+        path = node.get('Path', '') or ''
+        stream_security = node.get('StreamSecurity', '') or ''
+        
+        plugin = ''
+        plugin_args = ''
+        
+        if network == 'tcp' and header_type == 'http':
+            plugin = 'obfs-local'
+            plugin_args = f'obfs=http;obfs-host={request_host};'
+        else:
+            if network == 'ws':
+                plugin_args += 'mode=websocket;'
+                if request_host:
+                    plugin_args += f'host={request_host};'
+                if path:
+                    escaped_path = path.replace('\\', '\\\\').replace('=', '\\=').replace(',', '\\,')
+                    plugin_args += f'path={escaped_path};'
+            elif network == 'quic':
+                plugin_args += 'mode=quic;'
+            
+            if stream_security == 'tls':
+                plugin_args += 'tls;'
+                cert = node.get('Cert', '')
+                if cert:
+                    try:
+                        import re as cert_re
+                        begin_marker = '-----BEGIN CERTIFICATE-----\n'
+                        end_marker = '\n-----END CERTIFICATE-----'
+                        
+                        if begin_marker in cert:
+                            start = cert.find(begin_marker) + len(begin_marker)
+                            end = cert.find(end_marker, start)
+                            base64_content = cert[start:end].strip()
+                            base64_content = base64_content.replace('=', '\\=')
+                            plugin_args += f'certRaw={base64_content};'
+                    except Exception:
+                        pass
+            
+            if plugin_args:
+                plugin = 'v2ray-plugin'
+                plugin_args += 'mux=0;'
+        
+        if plugin:
+            plugin_str = plugin + ';' + plugin_args
+            if plugin_str.endswith(';'):
+                plugin_str = plugin_str[:-1]
+            params['plugin'] = url_encode(plugin_str)
+        
+        query_string = build_query_string(params)
+        
         remark = ""
         if node.get('Remarks'):
             remark = "#" + url_encode(remove_indexid_suffix(node['Remarks']))
         
-        return f"ss://{user_info}@{address}:{port}{remark}"
+        uri = f"ss://{user_info}@{address}:{port}"
+        if query_string:
+            uri += f"?{query_string}"
+        uri += remark
+        
+        return uri
         
     except Exception as e:
         logger.error(f"生成 Shadowsocks 链接失败: {e}")
@@ -1139,7 +1232,7 @@ def get_full_node_data(db_path: str, index_ids: List[str]) -> Optional[List[Dict
                 Id, Password, Username, Network, HeaderType, RequestHost,
                 Path, StreamSecurity, AllowInsecure, Sni, Alpn,
                 Fingerprint, PublicKey, ShortId, SpiderX, ProtoExtra,
-                CertSha, Extra, Security, Mldsa65Verify, EchConfigList, Finalmask
+                CertSha, Extra, Security, Mldsa65Verify, EchConfigList, Finalmask, Cert
             FROM ProfileItem 
             WHERE IndexId IN ({placeholders})
         """
