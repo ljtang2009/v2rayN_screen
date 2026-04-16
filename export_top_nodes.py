@@ -28,19 +28,16 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional, Dict, List, Any, Tuple
+from config import DB_PATH, SQL_FILE_PATH
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # =====================================================
 # 配置变量（用户可根据需要修改）
 # =====================================================
 
-# SQLite 数据库文件路径
-DB_PATH = r"D:\APP\v2rayN-windows-64-SelfContained\guiConfigs\guiNDB.db"
-
-# SQL 脚本文件路径
-SQL_FILE_PATH = r"d:\Projects\v2rayN_screen\sql\query_top_performing_nodes.sql"
-
 # 导出文件目录
-EXPORT_DIR = r"E:\Download"
+EXPORT_DIR = os.path.join(SCRIPT_DIR, 'export')
 
 # 最大导出节点数量
 MAX_NODES = 100

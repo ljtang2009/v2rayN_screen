@@ -22,10 +22,7 @@ import sqlite3
 import os
 import re
 from typing import Optional, List, Tuple, Any
-
-DB_PATH = r"D:\APP\v2rayN-windows-64-SelfContained\guiConfigs\guiNDB.db"
-SQL_FILE_PATH = r"d:\Projects\v2rayN_screen\sql\query_top_performing_nodes.sql"
-
+from config import DB_PATH, SQL_FILE_PATH
 
 def read_sql_file(file_path: str) -> Optional[str]:
     """

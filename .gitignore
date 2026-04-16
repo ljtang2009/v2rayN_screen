@@ -1,2 +1,5 @@
 .history
 .vscode
+.env
+__pycache__/
+export/

@@ -184,6 +184,10 @@ ORDER BY tbl_name, name;
      ```bash
      sqlite3 guiConfigs/guiNDB.db < sql/update_profile_item_remarks.sql
      ```
+   - 或使用 Python 脚本（推荐）：
+     ```bash
+     python update_remarks.py
+     ```
 
 3. **验证更新结果**：
    - 执行脚本中的验证查询，确认更新是否成功
@@ -243,12 +247,38 @@ ORDER BY tbl_name, name;
 
 ### 步骤六：查询优秀节点
 
-为从 `ProfileExItemHistory` 表中识别表现优秀的节点，提供了两种查询方式：
+为从 `ProfileExItemHistory` 表中识别表现优秀的节点，提供了多种工具：
 
 | 方式 | 工具 | 适用场景 |
 |-----|------|---------|
 | **方式一** | 数据库客户端（DBeaver等） | 需要可视化操作、自定义查询、导出多种格式 |
-| **方式二** | Python 脚本 | 快速查看结果、命令行操作、自动化集成 |
+| **方式二** | Python 脚本 `query_top_nodes.py` | 快速查看结果、命令行操作、自动化集成 |
+| **方式三** | Python 脚本 `update_remarks.py` | 更新节点 Remarks 字段（追加 IndexId） |
+
+---
+
+#### 配置说明
+
+项目使用 `config.py` 模块统一管理配置：
+
+| 文件 | 作用 | 是否提交到 Git |
+|-----|------|--------------|
+| `config.py` | 存储配置函数和默认值 | ✓ 是 |
+| `.env` | 用户自定义配置（数据库路径等） | ✗ 否 |
+
+**配置步骤**：
+
+1. 复制 `.env.template` 为 `.env`（如果不存在 `.env`）
+2. 编辑 `.env` 文件，设置数据库路径：
+   ```bash
+   DB_PATH=/你的实际路径/guiNDB.db
+   ```
+
+**为什么使用 .env？**
+
+- 不同用户的数据库路径可能不同
+- 避免硬编码路径提交到 Git
+- 保护隐私信息
 
 ---
 
@@ -401,7 +431,7 @@ HAVING 延迟波动率 <= 0.5
 
 为方便用户快速执行优秀节点筛选查询，提供了 Python SQL 查询执行脚本，可直接在命令行中查看查询结果。
 
-**程序文件位置**：`run_query1.py`
+**程序文件位置**：`query_top_nodes.py`
 
 **功能特点**：
 
@@ -418,20 +448,30 @@ HAVING 延迟波动率 <= 0.5
 
 **配置说明**：
 
-打开 `run_query1.py` 文件，修改以下配置变量：
+打开 `query_top_nodes.py` 文件，修改以下配置变量：
 
 ```python
-# SQLite 数据库文件路径（必填）
-DB_PATH = r"D:\APP\v2rayN-windows-64-SelfContained\guiConfigs\guiNDB.db"
+# 数据库路径从 config.py 读取，无需在此处修改
+# 如需修改，请编辑项目根目录下的 .env 文件
+DB_PATH = ...  # 自动从 config.py 读取
+SQL_FILE_PATH = ...  # 自动从 config.py 读取
+```
 
-# SQL 脚本文件路径（必填）
-SQL_FILE_PATH = r"d:\Projects\v2rayN_screen\sql\query_top_performing_nodes.sql"
+**配置方式**：
+
+Python 脚本使用 `config.py` 模块统一管理配置：
+- `config.py`：存储配置函数和默认值
+- `.env`：用户自定义配置（不会被提交到 Git）
+
+如需修改数据库路径，请编辑项目根目录下的 `.env` 文件：
+```bash
+DB_PATH=/你的实际路径/guiNDB.db
 ```
 
 **使用方法**：
 
 ```bash
-python run_query1.py
+python query_top_nodes.py
 ```
 
 **输出格式**：
@@ -505,14 +545,13 @@ Python 列表格式：
 打开 `export_top_nodes.py` 文件，修改以下配置变量：
 
 ```python
-# SQLite 数据库文件路径（必填）
-DB_PATH = r"D:\APP\v2rayN-windows-64-SelfContained\guiConfigs\guiNDB.db"
+# 数据库路径从 config.py 读取，无需在此处修改
+# 如需修改，请编辑项目根目录下的 .env 文件
+DB_PATH = ...  # 自动从 config.py 读取
+SQL_FILE_PATH = ...  # 自动从 config.py 读取
 
-# SQL 脚本文件路径（必填）
-SQL_FILE_PATH = r"d:\Projects\v2rayN_screen\sql\query_top_performing_nodes.sql"
-
-# 导出文件目录（必填）
-EXPORT_DIR = r"E:\Download"
+# 导出文件目录（可选，默认导出到项目 export 目录）
+EXPORT_DIR = r"export"
 
 # 最大导出节点数量（可选，默认100）
 MAX_NODES = 100
@@ -617,7 +656,7 @@ ss://YWVzLTI1Ni1nY206cGFzc3dvcmQxMjM=@192.168.1.1:8388#节点名称
 v2rayN_screen/
 ├── README.md                                          # 项目说明文档
 ├── export_top_nodes.py                                # 优秀节点导出工具
-├── run_query1.py                                      # SQL 查询执行脚本
+├── query_top_nodes.py                                      # SQL 查询执行脚本
 ├── decode_base64_links.py                             # Base64解码工具
 ├── fix_import_format.py                               # 换行符修复工具
 ├── sql/
