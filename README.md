@@ -618,6 +618,8 @@ v2rayN_screen/
 ├── README.md                                          # 项目说明文档
 ├── export_top_nodes.py                                # 优秀节点导出工具
 ├── run_query1.py                                      # SQL 查询执行脚本
+├── decode_base64_links.py                             # Base64解码工具
+├── fix_import_format.py                               # 换行符修复工具
 ├── sql/
 │   ├── create_profile_ex_item_history_table.sql       # 创建历史记录表
 │   ├── create_profile_ex_item_history_triggers.sql    # 创建触发器
@@ -656,11 +658,64 @@ v2rayN_screen/
 1. 节点配置不完整
 2. 协议类型不支持
 3. 文件编码问题
+4. 文件格式问题（Base64编码或换行符格式不正确）
 
 **解决方法**：
 1. 检查程序日志，查看哪些节点生成失败
 2. 确认节点配置是否完整（地址、端口、密码等）
 3. 确保导出文件使用 UTF-8 编码
+4. 如果导入时出现 "ArgumentOutOfRange" 错误，可能是文件格式问题，请使用以下工具修复：
+
+#### 工具一：Base64解码工具
+
+**适用场景**：导入文件被错误地进行了Base64编码（所有链接在一行中）
+
+**程序文件位置**：`decode_base64_links.py`
+
+**使用方法**：
+```bash
+python decode_base64_links.py <输入文件> [输出文件]
+```
+
+**示例**：
+```bash
+# 基本用法（自动生成输出文件名）
+python decode_base64_links.py encoded_links.txt
+
+# 指定输出文件名
+python decode_base64_links.py encoded_links.txt decoded_links.txt
+```
+
+**功能说明**：
+- 自动识别并解码Base64编码的文件
+- 将单行链接转换为多行格式
+- 自动转换换行符为Unix格式（LF）
+- 显示解码后的链接数量和示例
+
+#### 工具二：换行符修复工具
+
+**适用场景**：导入文件使用Windows换行符（CRLF）导致解析失败
+
+**程序文件位置**：`fix_import_format.py`
+
+**使用方法**：
+```bash
+python fix_import_format.py <输入文件> [输出文件]
+```
+
+**示例**：
+```bash
+# 基本用法（覆盖原文件）
+python fix_import_format.py links.txt
+
+# 指定输出文件名
+python fix_import_format.py links.txt fixed_links.txt
+```
+
+**功能说明**：
+- 将Windows换行符（CRLF）转换为Unix换行符（LF）
+- 显示文件中的换行符统计信息
+- 确保v2rayN能够正确解析每一行链接
 
 ### 4. 如何修改筛选条件？
 
