@@ -144,6 +144,24 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
         print("查询结果为空")
         return
     
+    # 定义颜色代码
+    colors = [
+        '\033[94m',  # 蓝色
+        '\033[92m',  # 绿色
+        '\033[93m',  # 黄色
+        '\033[95m',  # 紫色
+        '\033[96m',  # 青色
+        '\033[91m',  # 红色
+        '\033[97m',  # 白色
+        '\033[94m',  # 蓝色（循环）
+        '\033[92m',  # 绿色（循环）
+        '\033[93m',  # 黄色（循环）
+        '\033[95m',  # 紫色（循环）
+        '\033[96m',  # 青色（循环）
+        '\033[91m',  # 红色（循环）
+    ]
+    reset_color = '\033[0m'
+    
     print("\n" + "=" * 120)
     print(f"查询结果：共 {len(results)} 条记录")
     print("=" * 120)
@@ -156,15 +174,24 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
             max_width = max(max_width, min(cell_width, 50))
         col_widths.append(max_width)
     
-    header_line = " | ".join(str(col).ljust(col_widths[i]) for i, col in enumerate(columns))
+    # 打印表头
+    header_parts = []
+    for i, col in enumerate(columns):
+        color = colors[i % len(colors)]
+        header_parts.append(f"{color}{str(col).ljust(col_widths[i])}{reset_color}")
+    header_line = " | ".join(header_parts)
     print(header_line)
     print("-" * len(header_line))
     
+    # 打印数据行
     for row in results:
-        row_line = " | ".join(
-            str(cell if cell is not None else "NULL").ljust(col_widths[i])[:col_widths[i]]
-            for i, cell in enumerate(row)
-        )
+        row_parts = []
+        for i, cell in enumerate(row):
+            color = colors[i % len(colors)]
+            cell_str = str(cell if cell is not None else "NULL")
+            cell_str = cell_str.ljust(col_widths[i])[:col_widths[i]]
+            row_parts.append(f"{color}{cell_str}{reset_color}")
+        row_line = " | ".join(row_parts)
         print(row_line)
     
     print("=" * 120)
