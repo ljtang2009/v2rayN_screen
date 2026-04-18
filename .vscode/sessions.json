@@ -1,0 +1,35 @@
+{
+    "$schema": "https://cdn.statically.io/gh/nguyenngoclongdev/cdn/main/schema/v11/terminal-keeper.json",
+    "theme": "tribe",
+    "active": "default",
+    "activateOnStartup": false,
+    "keepExistingTerminals": false,
+    "sessions": {
+        "default": [
+            {
+                "name": "查询优秀节点",
+                "commands": [
+                    "python query_top_nodes.py"
+                ],
+                "icon": "menu",
+                "color": "terminal.ansiGreen"
+            },
+            {
+                "name": "导出优秀节点",
+                "commands": [
+                    "python export_top_nodes.py"
+                ],
+                "icon": "export",
+                "color": "terminal.ansiGreen"
+            },
+            {
+                "name": "更新节点名称",
+                "commands": [
+                    "python update_remarks.py"
+                ],
+                "icon": "compare-changes",
+                "color": "terminal.ansiRed"
+            }
+        ]
+    }
+}
