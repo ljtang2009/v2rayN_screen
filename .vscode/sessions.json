@@ -9,7 +9,7 @@
             {
                 "name": "查询优秀节点",
                 "commands": [
-                    "python query_top_nodes.py"
+                    "python query_top_nodes.py --limit 10"
                 ],
                 "icon": "menu",
                 "color": "terminal.ansiGreen"

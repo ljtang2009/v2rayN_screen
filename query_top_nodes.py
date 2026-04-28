@@ -21,6 +21,7 @@ SQL查询执行脚本
 import sqlite3
 import os
 import re
+import argparse
 from typing import Optional, List, Tuple, Any
 from config import DB_PATH, SQL_FILE_PATH
 
@@ -46,49 +47,58 @@ def read_sql_file(file_path: str) -> Optional[str]:
         return None
 
 
-def extract_query1(sql_content: str) -> Optional[str]:
+def extract_query1(sql_content: str, limit: int = 100) -> Optional[str]:
     """
     从 SQL 文件内容中提取"查询1"语句
-    
+
     参数：
         sql_content: SQL 文件内容
-    
+        limit: 最大查询数量
+
     返回：
         查询1的 SQL 语句，失败返回 None
     """
     try:
         pattern = r'--\s*查询1[^;]*;(?:--|SELECT)'
         match = re.search(pattern, sql_content, re.IGNORECASE | re.DOTALL)
-        
+
         if match:
             start_marker = "-- =====================================================\n-- 查询1:"
             start_idx = sql_content.find(start_marker)
             if start_idx == -1:
                 start_idx = sql_content.lower().find("-- 查询1")
-            
+
             if start_idx != -1:
                 end_marker = "-- =====================================================\n-- 查询2:"
                 end_idx = sql_content.find(end_marker)
                 if end_idx == -1:
                     end_idx = sql_content.lower().find("-- 查询2")
-                
+
                 if end_idx != -1:
                     query_section = sql_content[start_idx:end_idx]
                 else:
                     query_section = sql_content[start_idx:]
-                
+
                 select_match = re.search(r'SELECT\s+.*?;', query_section, re.IGNORECASE | re.DOTALL)
                 if select_match:
-                    return select_match.group(0)
-        
+                    sql = select_match.group(0)
+                    sql = re.sub(r'\s*LIMIT\s+\d+\s*;?\s*$', '', sql, flags=re.IGNORECASE)
+                    sql = sql.rstrip(';').strip()
+                    sql += f" LIMIT {limit};"
+                    return sql
+
         select_pattern = r'(SELECT\s+p\.IndexId.*?LIMIT\s+100;)'
         select_match = re.search(select_pattern, sql_content, re.IGNORECASE | re.DOTALL)
         if select_match:
-            return select_match.group(1)
-        
+            sql = select_match.group(1)
+            sql = re.sub(r'\s*LIMIT\s+\d+\s*;?\s*$', '', sql, flags=re.IGNORECASE)
+            sql = sql.rstrip(';').strip()
+            sql += f" LIMIT {limit};"
+            return sql
+
         print("错误：无法从 SQL 文件中提取查询1语句")
         return None
-        
+
     except Exception as e:
         print(f"错误：提取查询1失败 - {e}")
         return None
@@ -195,33 +205,35 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
         print(row_line)
     
     print("=" * 120)
-    
-    print("\nPython 列表格式：")
-    print("-" * 40)
-    print(f"列名: {columns}")
-    print(f"数据行数: {len(results)}")
-    print("\n前5行数据示例：")
-    for i, row in enumerate(results[:5]):
-        print(f"  [{i}] {list(row)}")
-    if len(results) > 5:
-        print(f"  ... (共 {len(results)} 行)")
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description='SQL 查询执行脚本',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='示例: python query_top_nodes.py --limit 50'
+    )
+    parser.add_argument('-l', '--limit', type=int, default=100,
+                        help='要查询的节点数量 (默认: 100)')
+    args = parser.parse_args()
+
+    limit = args.limit
+
     print("=" * 60)
     print("SQL 查询执行脚本")
     print("=" * 60)
     print(f"数据库路径: {DB_PATH}")
     print(f"SQL 文件路径: {SQL_FILE_PATH}")
+    print(f"查询节点数量: {limit}")
     print()
-    
+
     print("正在读取 SQL 文件...")
     sql_content = read_sql_file(SQL_FILE_PATH)
     if sql_content is None:
         return
-    
+
     print("正在提取查询1语句...")
-    sql_query = extract_query1(sql_content)
+    sql_query = extract_query1(sql_content, limit)
     if sql_query is None:
         return
     
