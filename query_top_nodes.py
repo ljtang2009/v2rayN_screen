@@ -154,6 +154,11 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
         print("查询结果为空")
         return
     
+    # 过滤掉 IndexId 列
+    exclude_columns = {'IndexId', 'indexid', 'INDEXID'}
+    filtered_indices = [i for i, col in enumerate(columns) if col not in exclude_columns]
+    filtered_columns = [columns[i] for i in filtered_indices]
+    
     # 定义颜色代码
     colors = [
         '\033[94m',  # 蓝色
@@ -177,16 +182,17 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
     print("=" * 120)
     
     col_widths = []
-    for i, col in enumerate(columns):
+    for i, col in enumerate(filtered_columns):
         max_width = len(str(col))
+        orig_idx = filtered_indices[i]
         for row in results:
-            cell_width = len(str(row[i]) if row[i] is not None else "NULL")
+            cell_width = len(str(row[orig_idx]) if row[orig_idx] is not None else "NULL")
             max_width = max(max_width, min(cell_width, 50))
         col_widths.append(max_width)
     
     # 打印表头
     header_parts = []
-    for i, col in enumerate(columns):
+    for i, col in enumerate(filtered_columns):
         color = colors[i % len(colors)]
         header_parts.append(f"{color}{str(col).ljust(col_widths[i])}{reset_color}")
     header_line = " | ".join(header_parts)
@@ -196,8 +202,9 @@ def display_results(results: List[Tuple[Any, ...]], columns: List[str]) -> None:
     # 打印数据行
     for row in results:
         row_parts = []
-        for i, cell in enumerate(row):
+        for i, orig_idx in enumerate(filtered_indices):
             color = colors[i % len(colors)]
+            cell = row[orig_idx]
             cell_str = str(cell if cell is not None else "NULL")
             cell_str = cell_str.ljust(col_widths[i])[:col_widths[i]]
             row_parts.append(f"{color}{cell_str}{reset_color}")

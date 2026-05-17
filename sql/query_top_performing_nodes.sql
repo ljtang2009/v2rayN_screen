@@ -46,12 +46,12 @@ SELECT
     MAX(h.datetime) AS 最近测试时间,
     ROUND(SUM(CASE WHEN h.Delay > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(h.id), 2) AS 连接成功率,
     ROUND(SUM(CASE WHEN h.Delay > 0 THEN (1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))) ELSE 0 END) * 100.0 / SUM(1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))), 2) AS 加权连接成功率,
-    AVG(h.Delay) AS 平均延迟,
+    ROUND(AVG(h.Delay), 2) AS 平均延迟,
     ROUND(SUM(h.Delay * (1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime)))) / SUM(1.0 / (1 + JULIANDAY('now') - JULIANDAY(h.datetime))), 2) AS 加权平均延迟,
-    MIN(h.Delay) AS 最低延迟,
-    MAX(h.Delay) AS 最高延迟,
+    ROUND(MIN(h.Delay), 2) AS 最低延迟,
+    ROUND(MAX(h.Delay), 2) AS 最高延迟,
     ROUND(AVG(h.Speed), 2) AS 平均速度,
-    MAX(h.Speed) AS 最高速度,
+    ROUND(MAX(h.Speed), 2) AS 最高速度,
     ROUND((MAX(h.Delay) - MIN(h.Delay)) * 1.0 / NULLIF(AVG(h.Delay), 0), 2) AS 延迟波动率
 FROM ProfileItem p
 INNER JOIN ProfileExItemHistory h ON p.IndexId = h.IndexId
