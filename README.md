@@ -656,7 +656,8 @@ ss://YWVzLTI1Ni1nY206cGFzc3dvcmQxMjM=@192.168.1.1:8388#节点名称
 v2rayN_screen/
 ├── README.md                                          # 项目说明文档
 ├── export_top_nodes.py                                # 优秀节点导出工具
-├── query_top_nodes.py                                      # SQL 查询执行脚本
+├── query_top_nodes.py                                 # SQL 查询执行脚本
+├── remove_failed_nodes.py                             # 删除测速失败节点工具
 ├── decode_base64_links.py                             # Base64解码工具
 ├── fix_import_format.py                               # 换行符修复工具
 ├── sql/
@@ -755,6 +756,41 @@ python fix_import_format.py links.txt fixed_links.txt
 - 将Windows换行符（CRLF）转换为Unix换行符（LF）
 - 显示文件中的换行符统计信息
 - 确保v2rayN能够正确解析每一行链接
+
+#### 工具三：删除测速失败节点工具
+
+**适用场景**：清理 `ProfileExItem` 中测速报 "运行 Core 失败，请查看提示信息" 的节点
+
+**程序文件位置**：`remove_failed_nodes.py`
+
+**功能特点**：
+- **自动扫描**：查询 `ProfileExItem` 表中 Message 包含 "运行 Core 失败" 的节点
+- **安全备份**：删除前自动备份数据库到当前目录
+- **级联清理**：删除 `ProfileItem` 和 `ProfileExItem` 记录，触发器自动清理 `ProfileExItemHistory`
+- **交互确认**：默认交互模式，支持 `--yes` 自动确认和 `--dry-run` 干运行
+
+**使用方法**：
+```bash
+# 干运行模式：只查看不删除
+python remove_failed_nodes.py --dry-run
+
+# 交互模式：显示节点后询问是否删除
+python remove_failed_nodes.py
+
+# 自动确认删除（慎用）
+python remove_failed_nodes.py --yes
+```
+
+**配置说明**：
+数据库路径从项目根目录下的 `.env` 文件读取：
+```bash
+DB_PATH=/Users/tang/Library/Application Support/v2rayN/guiConfigs/guiNDB.db
+```
+
+**注意事项**：
+1. **关闭 v2rayN**：执行删除前需先关闭 v2rayN，否则数据库可能被锁定导致写入失败
+2. **自动备份**：删除前会在当前目录生成 `guiNDB.db.backup_时间戳` 备份文件
+3. **触发器依赖**：依赖 `trg_profile_ex_item_delete` 触发器自动清理历史表
 
 ### 4. 如何修改筛选条件？
 
