@@ -655,8 +655,11 @@ ss://YWVzLTI1Ni1nY206cGFzc3dvcmQxMjM=@192.168.1.1:8388#节点名称
 ```
 v2rayN_screen/
 ├── README.md                                          # 项目说明文档
+├── config.py                                          # 配置文件（数据库路径等）
+├── node_query.py                                      # 节点查询公共模块
 ├── export_top_nodes.py                                # 优秀节点导出工具
 ├── query_top_nodes.py                                 # SQL 查询执行脚本
+├── manage_best_nodes.py                               # 优秀节点分组管理工具
 ├── remove_failed_nodes.py                             # 删除测速失败节点工具
 ├── decode_base64_links.py                             # Base64解码工具
 ├── fix_import_format.py                               # 换行符修复工具
@@ -791,6 +794,45 @@ DB_PATH=/Users/tang/Library/Application Support/v2rayN/guiConfigs/guiNDB.db
 1. **关闭 v2rayN**：执行删除前需先关闭 v2rayN，否则数据库可能被锁定导致写入失败
 2. **自动备份**：删除前会在当前目录生成 `guiNDB.db.backup_时间戳` 备份文件
 3. **触发器依赖**：依赖 `trg_profile_ex_item_delete` 触发器自动清理历史表
+
+#### 工具四：优秀节点分组管理工具
+
+**适用场景**：将测速结果优秀的节点自动归类到 `best_nodes` 订阅分组，方便在 v2rayN 窗口中批量测速
+
+**程序文件位置**：`manage_best_nodes.py`
+
+**功能特点**：
+- **智能查询**：基于 `ProfileExItemHistory` 历史数据，按加权连接成功率、延迟等多维度筛选优秀节点
+- **自动分组**：查找或创建 `best_nodes` 订阅分组
+- **安全更新**：执行前自动备份数据库
+- **清空旧数据**：自动解除该分组下现有节点的关联
+- **交互确认**：默认交互模式，支持 `--yes` 自动确认和 `--dry-run` 干运行
+
+**使用方法**：
+```bash
+# 干运行模式：预览要操作的节点，不修改数据库
+python manage_best_nodes.py --dry-run
+
+# 交互模式（默认查询 100 个优秀节点）
+python manage_best_nodes.py
+
+# 指定节点数量
+python manage_best_nodes.py --limit 50
+
+# 自动确认执行（慎用）
+python manage_best_nodes.py --yes --limit 50
+```
+
+**操作流程**：
+1. 查询 `ProfileExItemHistory` 中的优秀节点
+2. 查找 `SubItem` 表中 `Remarks = 'best_nodes'` 的订阅分组（不存在则询问创建）
+3. 将该分组下现有节点的 `Subid` 置空（解除关联，节点保留）
+4. 将优秀节点的 `Subid` 更新为 `best_nodes` 分组的 `Id`
+5. 重新打开 v2rayN，在 `best_nodes` 分组中对节点进行速度测试
+
+**V2rayN 数据变更说明**：
+- **解除关联**：根据 V2rayN 源码 `ConfigHandler.MoveToGroup` 的实现，节点和分组的关联通过 `ProfileItem.Subid` 字段控制。将 `Subid` 置为空字符串即表示该节点不再属于任何分组（与 `ProfileItem` 构造函数中 `Subid = string.Empty` 的默认值一致）。
+- **关联分组**：将 `Subid` 设置为目标分组的 `Id`。
 
 ### 4. 如何修改筛选条件？
 
