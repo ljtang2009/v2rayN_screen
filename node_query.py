@@ -104,14 +104,22 @@ def execute_query(db_path: str, sql: str) -> Optional[Tuple[List[Tuple[Any, ...]
             conn.close()
 
 
-def get_top_nodes(db_path: str = DB_PATH, sql_file_path: str = SQL_FILE_PATH, limit: int = 100) -> List[Dict[str, Any]]:
+def get_top_nodes(
+    db_path: str = DB_PATH,
+    sql_file_path: str = SQL_FILE_PATH,
+    limit: int = 100,
+    max_per_address: int = 3,
+) -> List[Dict[str, Any]]:
     """
     查询优秀节点，返回节点列表（字典格式）
+
+    相同服务器地址的节点最多保留 max_per_address 个（按 SQL 排序取最优秀的）。
 
     参数：
         db_path: 数据库路径
         sql_file_path: SQL 文件路径
         limit: 最大查询数量
+        max_per_address: 同一服务器地址最多保留的节点数（默认 3）
 
     返回：
         节点字典列表，每个字典包含查询结果的所有列
@@ -120,7 +128,8 @@ def get_top_nodes(db_path: str = DB_PATH, sql_file_path: str = SQL_FILE_PATH, li
     if sql_content is None:
         return []
 
-    sql_query = extract_query1(sql_content, limit)
+    # 先查询 limit * 3 留有余量，用于按地址过滤后仍能满足 limit
+    sql_query = extract_query1(sql_content, limit * 3)
     if sql_query is None:
         return []
 
@@ -136,7 +145,16 @@ def get_top_nodes(db_path: str = DB_PATH, sql_file_path: str = SQL_FILE_PATH, li
             node[col] = row[i]
         nodes.append(node)
 
-    return nodes
+    # 按服务器地址分组，每组最多保留 max_per_address 个（SQL 已排序，直接顺序截取即可）
+    address_counts: Dict[str, int] = {}
+    filtered_nodes: List[Dict[str, Any]] = []
+    for node in nodes:
+        address = node.get("服务器地址", node.get("Address", ""))
+        if address_counts.get(address, 0) < max_per_address:
+            filtered_nodes.append(node)
+            address_counts[address] = address_counts.get(address, 0) + 1
+
+    return filtered_nodes[:limit]
 
 
 def display_nodes(nodes: List[Dict[str, Any]], exclude_columns: Optional[set] = None) -> None:

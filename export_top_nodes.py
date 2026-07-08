@@ -30,6 +30,7 @@ import argparse
 from datetime import datetime
 from typing import Optional, Dict, List, Any, Tuple
 from config import DB_PATH, SQL_FILE_PATH
+from node_query import get_top_nodes
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1094,111 +1095,6 @@ def generate_share_uri(node: Dict[str, Any]) -> Optional[str]:
 # SQL 相关函数
 # =====================================================
 
-def read_sql_file(file_path: str) -> Optional[str]:
-    """
-    读取 SQL 文件内容
-
-    参数：
-        file_path: SQL 文件路径
-
-    返回：
-        SQL 文件内容
-    """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        logger.info(f"成功读取 SQL 文件: {file_path}")
-        return content
-    except FileNotFoundError:
-        logger.error(f"SQL 文件不存在: {file_path}")
-        return None
-    except PermissionError:
-        logger.error(f"无权限读取 SQL 文件: {file_path}")
-        return None
-    except Exception as e:
-        logger.error(f"读取 SQL 文件失败: {e}")
-        return None
-
-
-def extract_query1(sql_content: str, limit: int = 100) -> Optional[str]:
-    """
-    从 SQL 文件中提取查询1的内容
-
-    参数：
-        sql_content: SQL 文件内容
-        limit: 最大查询数量
-
-    返回：
-        查询1的 SQL 语句
-    """
-    try:
-        pattern = r'--\s*查询1:.*?(?=--\s*查询2:|--\s*关键筛选条件说明|$)'
-        match = re.search(pattern, sql_content, re.DOTALL | re.IGNORECASE)
-
-        if match:
-            query = match.group(0)
-            lines = query.split('\n')
-            sql_lines = [line for line in lines if not line.strip().startswith('--')]
-            sql = '\n'.join(sql_lines).strip()
-
-            sql = re.sub(r'\s*LIMIT\s+\d+\s*;?\s*$', '', sql, flags=re.IGNORECASE)
-
-            sql = sql.rstrip(';').strip()
-
-            sql += f" LIMIT {limit};"
-
-            logger.info("成功提取查询1的 SQL 语句")
-            return sql
-        else:
-            logger.error("无法从 SQL 文件中提取查询1")
-            return None
-
-    except Exception as e:
-        logger.error(f"提取查询1失败: {e}")
-        return None
-
-
-def execute_query(db_path: str, sql: str) -> Optional[List[Dict[str, Any]]]:
-    """
-    执行 SQL 查询
-
-    参数：
-        db_path: 数据库文件路径
-        sql: SQL 查询语句
-
-    返回：
-        查询结果列表
-    """
-    conn = None
-    try:
-        if not os.path.exists(db_path):
-            logger.error(f"数据库文件不存在: {db_path}")
-            return None
-
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-
-        results = [dict(row) for row in rows]
-
-        logger.info(f"查询成功，返回 {len(results)} 条记录")
-        return results
-
-    except sqlite3.Error as e:
-        logger.error(f"数据库查询错误: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"执行查询失败: {e}")
-        return None
-    finally:
-        if conn:
-            conn.close()
-            logger.info("数据库连接已关闭")
-
-
 def get_full_node_data(db_path: str, index_ids: List[str]) -> Optional[List[Dict[str, Any]]]:
     """
     根据 IndexId 列表获取完整的节点数据
@@ -1360,18 +1256,8 @@ def main():
     logger.info(f"导出目录: {EXPORT_DIR}")
     logger.info(f"最大导出节点数: {limit}")
 
-    sql_content = read_sql_file(SQL_FILE_PATH)
-    if not sql_content:
-        logger.error("无法读取 SQL 文件，程序退出")
-        return 1
-
-    query_sql = extract_query1(sql_content, limit)
-    if not query_sql:
-        logger.error("无法提取查询语句，程序退出")
-        return 1
-
     logger.info("执行查询以获取优秀节点列表...")
-    query_results = execute_query(DB_PATH, query_sql)
+    query_results = get_top_nodes(db_path=DB_PATH, sql_file_path=SQL_FILE_PATH, limit=limit)
 
     if query_results is None:
         logger.error("查询执行失败，程序退出")
